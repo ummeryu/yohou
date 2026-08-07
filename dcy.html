@@ -1,11 +1,126 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>关于 dcy 的一些东西</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 24px;
+            background: #f5f7fb;
+            color: #333;
+        }
+
+        h1 {
+            margin-bottom: 20px;
+        }
+
+        .back-home-btn {
+            display: inline-block;
+            margin-bottom: 16px;
+            padding: 8px 14px;
+            background: #2b6cb0;
+            color: white;
+            text-decoration: none;
+            border-radius: 999px;
+            font-size: 14px;
+            transition: background 0.2s ease;
+        }
+
+        .back-home-btn:hover {
+            background: #225a8d;
+        }
+
+        .content-section {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+        }
+
+        .video-container {
+            margin-bottom: 24px;
+        }
+
+        .video-container h2 {
+            margin: 0 0 16px;
+            color: #2b6cb0;
+            font-size: 18px;
+        }
+
+        video {
+            width: 100%;
+            height: auto;
+            border-radius: 8px;
+            background: #000;
+        }
+
+        .video-list {
+            display: grid;
+            gap: 20px;
+        }
+
+        .video-item {
+            border: 1px solid #e2e8f0;
+            border-radius: 10px;
+            padding: 16px;
+            background: #f8fafc;
+            transition: transform 0.2s ease;
+        }
+
+        .video-item:hover {
+            transform: translateY(-3px);
+        }
+
+        .video-item h3 {
+            margin: 0 0 12px;
+            color: #243447;
+        }
+
+        .video-item video {
+            width: 100%;
+            height: auto;
+            border-radius: 8px;
+            margin-bottom: 12px;
+            cursor: pointer;
+        }
+
+        .video-item p {
+            margin: 0;
+            font-size: 14px;
+            color: #4a5568;
+        }
+    </style>
 </head>
 <body>
-    
+    <!-- <a href="index.html" class="back-home-btn">← 返回主页</a>
+    <h1>关于 dcy 的一些东西</h1>
+
+    <section class="content-section">
+        <div class="video-list">
+            <div class="video-item">
+                <h3>视频播放示例</h3>
+                <iframe src="//player.bilibili.com/player.html?isOutside=true&aid=117046616528478&bvid=BV1oguJ6zEn7&cid=40642612040&p=1" 
+                scrolling="no" border="0" frameborder="no" framespacing="0" allowfullscreen="true"></iframe>
+                <p>这是一个视频播放示例。你可以在 videos/sample.mp4 位置放入你的视频文件。</p>
+            </div>
+        </div>
+    </section> -->
+    <div class="video-item">
+        <h3>视频播放示例</h3>
+        <!--这里粘贴你点嵌入代码复制出来的完整iframe-->
+        <iframe 
+        src="//player.bilibili.com/player.html?isOutside=true&aid=117046616528478&bvid=BV1oguJ6zEn7&cid=40642612040&p=1"
+        width="100%"
+        height="360"
+        scrolling="no"
+        frameborder="no"
+        allowfullscreen
+        style="border-radius:10px;margin-bottom:12px;">
+        </iframe>
+        <p>这是一个视频播放示例。你可以在 videos/sample.mp4 位置放入你的视频文件。</p>
+    </div>
 </body>
 </html>
