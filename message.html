@@ -17,29 +17,15 @@
             justify-content: center;
             padding: 24px;
         }
-        .card {
+        .message-board {
             width: min(100%, 640px);
             background: white;
             border-radius: 16px;
             box-shadow: 0 10px 30px rgba(36, 52, 71, 0.12);
             padding: 28px;
         }
-        .topbar {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 20px;
-            gap: 12px;
-        }
-        .topbar a {
-            text-decoration: none;
-            color: #2b6cb0;
-            font-weight: 600;
-        }
-        h1 { margin: 0; font-size: 28px; }
-        p { margin: 0 0 18px; line-height: 1.6; color: #4a5568; }
-        form { display: grid; gap: 14px; }
-        label { font-weight: 600; color: #2d3748; }
+        h3 { margin: 0 0 20px; font-size: 24px; }
+        label { font-weight: 600; color: #2d3748; display: block; margin-bottom: 8px; }
         input, textarea {
             width: 100%;
             padding: 12px 14px;
@@ -47,13 +33,14 @@
             border-radius: 10px;
             font-size: 15px;
             outline: none;
-            transition: border-color 0.2s ease, box-shadow 0.2s ease;
+            transition: border-color 0.2s ease;
+            margin-bottom: 14px;
         }
         input:focus, textarea:focus {
             border-color: #4c6ef5;
             box-shadow: 0 0 0 3px rgba(76, 110, 245, 0.15);
         }
-        textarea { min-height: 120px; resize: vertical; }
+        textarea { resize: vertical; }
         button {
             border: none;
             border-radius: 999px;
@@ -65,89 +52,30 @@
             transition: background 0.2s ease;
         }
         button:hover { background: #225a8d; }
-        .notice {
-            margin-top: 14px;
-            padding: 12px 14px;
-            border-radius: 10px;
-            background: #f0fff4;
-            color: #2f855a;
-            display: none;
-        }
-        .notice.show { display: block; }
     </style>
 </head>
 <body>
-    <!-- <div class="card">
-        <div class="topbar">
-            <h1>留言板</h1>
-            <a href="index.html">← 返回首页</a>
-        </div>
-        <p>留下你的想法、建议或问候，提交后会打开你的邮箱客户端帮你发送给我。</p>
-
-        <form id="messageForm">
-            <label for="name">你的名字</label>
-            <input id="name" name="name" type="text" placeholder="请输入你的名字" required>
-
-            <label for="email">你的邮箱</label>
-            <input id="email" name="email" type="email" placeholder="请输入你的邮箱" required>
-
-            <label for="message">留言内容</label>
-            <textarea id="message" name="message" placeholder="请输入留言内容" required></textarea>
-
-            <button type="submit">提交留言</button>
-        </form>
-
-        <div id="notice" class="notice"></div>
-    </div>
-
-    <script>
-        const recipientEmail = '2752318348@qq.com';
-        const form = document.getElementById('messageForm');
-        const notice = document.getElementById('notice');
-
-        form.addEventListener('submit', function (event) {
-            event.preventDefault();
-
-            const name = document.getElementById('name').value.trim();
-            const email = document.getElementById('email').value.trim();
-            const message = document.getElementById('message').value.trim();
-
-            if (!name || !email || !message) {
-                notice.textContent = '请完整填写所有内容后再提交。';
-                notice.classList.add('show');
-                return;
-            }
-
-            const subject = encodeURIComponent('新的留言');
-            const body = encodeURIComponent(`姓名：${name}\n邮箱：${email}\n\n留言内容：\n${message}`);
-
-            window.location.href = `mailto:${recipientEmail}?subject=${subject}&body=${body}`;
-
-            notice.textContent = '已为你打开邮箱客户端，请确认发送。';
-            notice.classList.add('show');
-            form.reset();
-        });
-    </script> -->
     <!-- 留言表单 -->
-<div class="message-board">
-  <h3>给我留言</h3>
-  <!-- 把下面your@shturl.替换成你自己接收留言的邮箱 -->
-  <form action="https://formsubmit.co/2752318348@qq.com" method="POST">
-    <!-- 防垃圾邮件配置 -->
-    <input type="hidden" name="_captcha" value="false">
-    <input type="hidden" name="_subject" value="网站收到新留言！">
+    <div class="message-board">
+    <h3>给我留言</h3>
+    <!-- 把下面your@shturl.替换成你自己接收留言的邮箱 -->
+    <form action="https://formsubmit.co/2752318348@qq.com" method="POST">
+        <!-- 防垃圾邮件配置 -->
+        <input type="hidden" name="_captcha" value="false">
+        <input type="hidden" name="_subject" value="网站收到新留言！">
+        <input type="hidden" name="_next" value="thank-you.html">
 
-    <div>
-      <label>昵称：</label>
-      <input type="text" name="昵称" required>
+        <div>
+        <label>昵称：</label>
+        <input type="text" name="昵称" required>
+        </div>
+        <div>
+        <label>留言内容：</label>
+        <textarea name="留言内容" rows="5" required></textarea>
+        </div>
+        <br>
+        <button type="submit">提交留言</button>
+    </form>
     </div>
-    <div>
-      <label>留言内容：</label>
-      <textarea name="留言内容" rows="5" required></textarea>
-    </div>
-    <br>
-    <button type="submit">提交留言</button>
-  </form>
-</div>
 </body>
 </html>

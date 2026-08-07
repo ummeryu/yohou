@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>感谢留言</title>
+    <style>
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background: linear-gradient(135deg, #f6f8ff, #eef4ff);
+            color: #243447;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 24px;
+        }
+        .card {
+            width: min(100%, 640px);
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 10px 30px rgba(36, 52, 71, 0.12);
+            padding: 28px;
+            text-align: center;
+        }
+        h1 { margin: 0 0 16px; font-size: 32px; }
+        p { margin: 0 0 12px; line-height: 1.6; color: #4a5568; }
+        .countdown { font-weight: 600; color: #2b6cb0; font-size: 18px; }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h1>✓ 感谢留言！</h1>
+        <p>你的留言已收到，我会尽快回复你。</p>
+        <p class="countdown">将在 <span id="countdown">3</span> 秒后返回留言板...</p>
+    </div>
+
+    <script>
+        let seconds = 3;
+        const countdownEl = document.getElementById('countdown');
+
+        const interval = setInterval(() => {
+            seconds--;
+            countdownEl.textContent = seconds;
+            if (seconds <= 0) {
+                clearInterval(interval);
+                window.location.href = 'message.html';
+            }
+        }, 1000);
+    </script>
+</body>
+</html>
