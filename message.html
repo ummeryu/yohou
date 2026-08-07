@@ -60,18 +60,17 @@
     <h3>给我留言</h3>
     <!-- 把下面your@shturl.替换成你自己接收留言的邮箱 -->
     <form action="https://formsubmit.co/2752318348@qq.com" method="POST">
-        <!-- 防垃圾邮件配置 -->
+        <input type="hidden" name="_next" value="./thank-you.html">
         <input type="hidden" name="_captcha" value="false">
         <input type="hidden" name="_subject" value="网站收到新留言！">
-        <input type="hidden" name="_next" value="./thank-you.html">
 
         <div>
-        <label>昵称：</label>
-        <input type="text" name="昵称" required>
+            <label>昵称：</label>
+            <input type="text" name="昵称" required>
         </div>
         <div>
-        <label>留言内容：</label>
-        <textarea name="留言内容" rows="5" required></textarea>
+            <label>留言内容：</label>
+            <textarea name="留言内容" rows="5" required></textarea>
         </div>
         <br>
         <button type="submit">提交留言</button>
