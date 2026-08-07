@@ -77,7 +77,7 @@
     </style>
 </head>
 <body>
-    <div class="card">
+    <!-- <div class="card">
         <div class="topbar">
             <h1>留言板</h1>
             <a href="index.html">← 返回首页</a>
@@ -127,6 +127,27 @@
             notice.classList.add('show');
             form.reset();
         });
-    </script>
+    </script> -->
+    <!-- 留言表单 -->
+<div class="message-board">
+  <h3>给我留言</h3>
+  <!-- 把下面your@shturl.替换成你自己接收留言的邮箱 -->
+  <form action="https://formsubmit.co/2752318348@qq.com" method="POST">
+    <!-- 防垃圾邮件配置 -->
+    <input type="hidden" name="_captcha" value="false">
+    <input type="hidden" name="_subject" value="网站收到新留言！">
+
+    <div>
+      <label>昵称：</label>
+      <input type="text" name="昵称" required>
+    </div>
+    <div>
+      <label>留言内容：</label>
+      <textarea name="留言内容" rows="5" required></textarea>
+    </div>
+    <br>
+    <button type="submit">提交留言</button>
+  </form>
+</div>
 </body>
 </html>
