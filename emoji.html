@@ -1,0 +1,190 @@
+
+<!doctype html>
+<html lang="zh-CN">
+<head>
+	<meta charset="utf-8" />
+	<meta name="viewport" content="width=device-width,initial-scale=1" />
+	<title>Emoji 选择器</title>
+	<style>
+		html,body{height:100%;margin:0;font-family:Segoe UI,Arial,Helvetica,sans-serif;background:#f8f9fb}
+		.panel{padding:20px;display:flex;gap:12px;flex-wrap:wrap;align-items:center}
+		.emoji-btn{font-size:28px;padding:10px;border-radius:8px;background:#fff;border:1px solid #e6e9ee;cursor:pointer;box-shadow:0 1px 2px rgba(0,0,0,.04)}
+		.emoji-btn:hover{transform:translateY(-3px)}
+
+		/* 全屏弹层 */
+		.overlay{position:fixed;inset:0;background:transparent;display:none;align-items:center;justify-content:center;z-index:9999}
+		.overlay.show{display:flex}
+		.face-wrap{position:relative;width:60vmin;height:60vmin;max-width:720px;max-height:720px;display:flex;align-items:center;justify-content:center}
+		.big-emoji{font-size:22vmin;user-select:none;pointer-events:none;transform:scale(.92);transition:transform .28s cubic-bezier(.2,.9,.2,1)}
+
+		/* 两只眼睛 */
+		.eye{position:absolute;width:10vmin;height:10vmin;border-radius:50%;background:#fff;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,.12)}
+		.pupil{width:36%;height:36%;background:#111;border-radius:50%;transform:translate(0,0)}
+		/* 左右眼位置（相对于 .face-wrap） */
+		.eye.left{left:32%;top:36%}
+		.eye.right{right:32%;top:36%}
+
+		.close-btn{position:absolute;top:18px;right:18px;background:rgba(255,255,255,.9);border:none;padding:8px 12px;border-radius:6px;cursor:pointer}
+
+		/* 粒子 */
+		.particle{position:absolute;width:10px;height:10px;border-radius:2px;opacity:1;pointer-events:none}
+
+		@media (max-width:600px){
+			.face-wrap{width:85vmin;height:85vmin}
+			.eye{width:14vmin;height:14vmin}
+			.big-emoji{font-size:26vmin}
+			.emoji-btn{font-size:34px;padding:14px}
+		}
+
+		/* 当弹层打开时禁止页面滚动 */
+		body.overlay-open{overflow:hidden;touch-action:none}
+	</style>
+</head>
+<body>
+
+	<div class="panel">
+		<div>选择一个表情：</div>
+		<!-- 一组 Unicode emoji 按钮 -->
+		<button class="emoji-btn">😄</button>
+		<button class="emoji-btn">😍</button>
+		<button class="emoji-btn">😎</button>
+		<button class="emoji-btn">😜</button>
+		<button class="emoji-btn">🤖</button>
+		<button class="emoji-btn">🐶</button>
+		<button class="emoji-btn">🦄</button>
+		<button class="emoji-btn">😱</button>
+	</div>
+
+	<div class="overlay" id="overlay" aria-hidden="true">
+		<div class="face-wrap" id="face">
+			<div class="big-emoji" id="bigEmoji">😄</div>
+			<div class="eye left"><div class="pupil"></div></div>
+			<div class="eye right"><div class="pupil"></div></div>
+			<button class="close-btn" id="closeBtn">关闭</button>
+		</div>
+	</div>
+
+	<script>
+		const buttons = document.querySelectorAll('.emoji-btn');
+		const overlay = document.getElementById('overlay');
+		const bigEmoji = document.getElementById('bigEmoji');
+		const face = document.getElementById('face');
+		const closeBtn = document.getElementById('closeBtn');
+		const eyes = document.querySelectorAll('.eye');
+		const pupils = document.querySelectorAll('.pupil');
+
+		let activeEmoji = '😄';
+		let hasMoved = false; // 标记用户是否移动过鼠标/触摸
+
+		buttons.forEach(b=>{
+			b.addEventListener('click', ()=>{
+				activeEmoji = b.textContent.trim();
+				openOverlay();
+			});
+		});
+
+		function openOverlay(){
+			bigEmoji.textContent = activeEmoji;
+			overlay.classList.add('show');
+			overlay.setAttribute('aria-hidden','false');
+			// 绑定事件
+				window.addEventListener('mousemove', onMove);
+				window.addEventListener('touchmove', onTouchMove,{passive:false});
+				// 点击 / 触摸 表情触发粒子
+				face.addEventListener('click', popParticles);
+				face.addEventListener('touchstart', popParticles, {passive:true});
+				document.body.classList.add('overlay-open');
+				// 打开动画
+				hasMoved = false;
+				requestAnimationFrame(()=>{ bigEmoji.style.transform='scale(1)'; });
+		}
+
+		function closeOverlay(){
+			overlay.classList.remove('show');
+			overlay.setAttribute('aria-hidden','true');
+			window.removeEventListener('mousemove', onMove);
+			window.removeEventListener('touchmove', onTouchMove);
+			face.removeEventListener('click', popParticles);
+			face.removeEventListener('touchstart', popParticles);
+			document.body.classList.remove('overlay-open');
+			bigEmoji.style.transform='scale(.92)';
+		}
+
+		closeBtn.addEventListener('click', (e)=>{e.stopPropagation();closeOverlay();});
+
+		function onMove(e){
+			hasMoved = true;
+			const clientX = e.clientX, clientY = e.clientY;
+			updateEyes(clientX, clientY);
+		}
+		function onTouchMove(e){
+			// 阻止默认滚动以便更稳定地跟随（仅在覆盖层打开时绑定）
+			e.preventDefault();
+			hasMoved = true;
+			const t = e.touches[0];
+			if(t) updateEyes(t.clientX, t.clientY);
+		}
+
+		function updateEyes(x, y){
+			eyes.forEach((eye, idx)=>{
+				const rect = eye.getBoundingClientRect();
+				const cx = rect.left + rect.width/2;
+				const cy = rect.top + rect.height/2;
+				const dx = x - cx;
+				const dy = y - cy;
+				const angle = Math.atan2(dy, dx);
+				// pupil 最大位移，左眼略大以提高灵敏度
+				const max = rect.width * (idx === 0 ? 0.34 : 0.28);
+				const px = Math.cos(angle) * max;
+				const py = Math.sin(angle) * max;
+				const pupil = pupils[idx];
+				pupil.style.transform = `translate(${px}px, ${py}px)`;
+			});
+		}
+
+		// 粒子效果
+		function popParticles(e){
+			const rect = face.getBoundingClientRect();
+			const cx = rect.left + rect.width/2;
+			const cy = rect.top + rect.height/2;
+			for(let i=0;i<30;i++){
+				const p = document.createElement('div');
+				p.className='particle';
+				const size = Math.random()*12+6;
+				p.style.width = size+'px';
+				p.style.height = size+'px';
+				// 颜色
+				p.style.background = `hsl(${Math.random()*360}deg 80% 60%)`;
+				document.body.appendChild(p);
+				// 起点在脸中心
+				p.style.left = cx - size/2 + 'px';
+				p.style.top = cy - size/2 + 'px';
+				// 目标运动
+				const angle = Math.random()*Math.PI*2;
+				const dist = Math.random()*200 + 60;
+				const tx = Math.cos(angle)*dist;
+				const ty = Math.sin(angle)*dist;
+				// 动画
+				p.animate([
+					{transform: 'translate(0,0)', opacity:1},
+					{transform: `translate(${tx}px, ${ty}px) rotate(${Math.random()*720}deg)`, opacity:0}
+				],{duration:800+Math.random()*600,easing:'cubic-bezier(.2,.8,.2,1)'}).onfinish = ()=>p.remove();
+			}
+		}
+
+		// 支持按 Esc 关闭
+		window.addEventListener('keydown', (e)=>{ if(e.key==='Escape') closeOverlay(); });
+
+		// 支持触摸，点击按钮后打开 overlay 时，由于 touch 事件可能已在 body 上，强制把眼睛初始位置居中
+		overlay.addEventListener('transitionend', ()=>{
+			// 如果用户尚未移动过，则初始化让瞳孔居中；若已移动过，则保持当前朝向
+			if(!hasMoved) pupils.forEach(p=>p.style.transform='translate(0,0)');
+		});
+
+		// 点击遮罩空白处关闭
+		overlay.addEventListener('click', (e)=>{ if(e.target===overlay) closeOverlay(); });
+
+	</script>
+</body>
+</html>
+
