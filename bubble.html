@@ -8,10 +8,10 @@
     :root{--bubble-bg:rgba(255,255,255,0.9);--bubble-color:#111}
     body{font-family:Arial,Helvetica,sans-serif;margin:0;height:100vh;display:flex;flex-direction:column}
     .topbar{padding:16px;background:#f6f8ff;border-bottom:1px solid #e6eefc}
-    .editor{max-width:900px;margin:18px auto;padding:12px;display:flex;gap:8px}
+    .editor{width:100%;max-width:1800px;margin:18px auto;padding:12px;display:flex;gap:8px}
     textarea{flex:1;min-height:80px;padding:12px;border-radius:10px;border:1px solid #dbe6ff;font-size:15px}
     button.submit{background:#2b6cb0;color:#fff;border:none;padding:10px 14px;border-radius:10px;cursor:pointer}
-    .canvas{position:relative;flex:1;overflow:hidden;background:linear-gradient(180deg,#fff,#f2f6ff)}
+    .canvas{position:relative;flex:1;overflow:hidden;border-top:2px solid #dbe6ff;background:linear-gradient(180deg,#fff,#f2f6ff)}
     .bubble{position:absolute;padding:10px 14px;border-radius:18px;background:var(--bubble-bg);color:var(--bubble-color);box-shadow:0 8px 20px rgba(20,30,60,.08);cursor:grab;max-width:260px;word-break:break-word;user-select:none;touch-action:none}
     .bubble.dragging{cursor:grabbing;z-index:20}
     .bubble.small{font-size:14px}
@@ -148,13 +148,16 @@
 
   viewerDel.addEventListener('click', ()=>{
     const id = viewerDel.dataset.id;
-    fetch('/api/bubbles/'+encodeURIComponent(id), {method:'DELETE'}).then(r=>{
-      if(r.ok) return r.json(); else throw r;
+    fetch('/api/bubbles/'+encodeURIComponent(id), {method:'DELETE'}).then(async r=>{
+      if(r.ok) return r.json();
+      let message = 'HTTP '+r.status;
+      try{ const body=await r.json(); if(body.error) message=body.error; }catch{}
+      throw new Error(message);
     }).then(()=>{
       // remove from DOM
       const it = active.get(id); if(it){ it.el.remove(); active.delete(id); }
       viewer.classList.remove('show');
-    }).catch(()=>{ alert('删除失败：你不是作者或网络错误'); });
+    }).catch(err=>{ alert('删除失败：'+err.message); });
   });
 
   // fetch existing bubbles on load
@@ -206,6 +209,28 @@
       y = Math.max(6, Math.min(maxY, y));
       el.style.left = x + 'px'; el.style.top = y + 'px';
     });
+    // 相交气泡交换碰撞方向，并分离重叠部分，避免互相覆盖
+    const items = Array.from(active.values()).filter(data=>!data.dragging);
+    for(let i=0;i<items.length;i++){
+      for(let j=i+1;j<items.length;j++){
+        const first=items[i], second=items[j];
+        const a=first.el.getBoundingClientRect(), b=second.el.getBoundingClientRect();
+        const overlapX=Math.min(a.right,b.right)-Math.max(a.left,b.left);
+        const overlapY=Math.min(a.bottom,b.bottom)-Math.max(a.top,b.top);
+        if(overlapX<=0 || overlapY<=0) continue;
+        if(overlapX<overlapY){
+          const direction=a.left<b.left?-1:1;
+          first.el.style.left=(parseFloat(first.el.style.left)+direction*overlapX/2)+'px';
+          second.el.style.left=(parseFloat(second.el.style.left)-direction*overlapX/2)+'px';
+          const velocity=first.vx; first.vx=second.vx; second.vx=velocity;
+        }else{
+          const direction=a.top<b.top?-1:1;
+          first.el.style.top=(parseFloat(first.el.style.top)+direction*overlapY/2)+'px';
+          second.el.style.top=(parseFloat(second.el.style.top)-direction*overlapY/2)+'px';
+          const velocity=first.vy; first.vy=second.vy; second.vy=velocity;
+        }
+      }
+    }
     requestAnimationFrame(rafLoop);
   }
 
