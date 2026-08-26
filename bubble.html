@@ -12,7 +12,8 @@
     textarea{flex:1;min-height:80px;padding:12px;border-radius:10px;border:1px solid #dbe6ff;font-size:15px}
     button.submit{background:#2b6cb0;color:#fff;border:none;padding:10px 14px;border-radius:10px;cursor:pointer}
     .canvas{position:relative;flex:1;overflow:hidden;background:linear-gradient(180deg,#fff,#f2f6ff)}
-    .bubble{position:absolute;padding:10px 14px;border-radius:18px;background:var(--bubble-bg);color:var(--bubble-color);box-shadow:0 8px 20px rgba(20,30,60,.08);cursor:pointer;max-width:260px;word-break:break-word}
+    .bubble{position:absolute;padding:10px 14px;border-radius:18px;background:var(--bubble-bg);color:var(--bubble-color);box-shadow:0 8px 20px rgba(20,30,60,.08);cursor:grab;max-width:260px;word-break:break-word;user-select:none;touch-action:none}
+    .bubble.dragging{cursor:grabbing;z-index:20}
     .bubble.small{font-size:14px}
     .bubble.big{font-size:22px;padding:18px 22px;border-radius:14px}
     .bubble .meta{display:block;margin-top:6px;font-size:11px;opacity:.6}
@@ -84,24 +85,62 @@
     el.innerHTML = '<div class="txt">'+escapeHtml(b.content)+'</div>' + '<span class="meta">#'+(new Date(b.createdAt)).toLocaleString()+'</span>';
     // position based on normalized x,y in viewport
     const w = canvas.clientWidth, h = canvas.clientHeight;
-    const x = Math.round((b.x||Math.random()) * Math.max(w-120, 80));
-    const y = Math.round((b.y||Math.random()) * Math.max(h-60, 60));
+    const x = Math.round((typeof b.x==='number'?b.x:Math.random()) * Math.max(w-120, 80));
+    const y = Math.round((typeof b.y==='number'?b.y:Math.random()) * Math.max(h-60, 60));
     el.style.left = x + 'px'; el.style.top = y + 'px';
     // random velocity
     const vx = rand(-0.3,0.3); const vy = rand(-0.2,0.2);
     canvas.appendChild(el);
-    active.set(b.id, {el,vx,vy});
+    active.set(b.id, {el,vx,vy,dragging:false,moved:false});
 
     el.addEventListener('click', (ev)=>{
       ev.stopPropagation();
+      const data = active.get(b.id);
+      if(data && data.moved){ data.moved=false; return; }
       showViewer(b);
     });
+    el.addEventListener('pointerdown', ev=>startDrag(ev,b));
+  }
+
+  function startDrag(ev,b){
+    const data = active.get(b.id);
+    if(!data) return;
+    data.dragging=true; data.moved=false;
+    const box=data.el.getBoundingClientRect();
+    data.offsetX=ev.clientX-box.left; data.offsetY=ev.clientY-box.top;
+    data.el.classList.add('dragging');
+    data.el.setPointerCapture(ev.pointerId);
+    data.el.addEventListener('pointermove', moveDrag);
+    data.el.addEventListener('pointerup', endDrag, {once:true});
+    data.el.addEventListener('pointercancel', endDrag, {once:true});
+    ev.preventDefault();
+  }
+
+  function moveDrag(ev){
+    const data=active.get(ev.currentTarget.dataset.id);
+    if(!data || !data.dragging) return;
+    const rect=canvas.getBoundingClientRect();
+    const maxX=Math.max(0,canvas.clientWidth-data.el.offsetWidth);
+    const maxY=Math.max(0,canvas.clientHeight-data.el.offsetHeight);
+    const x=Math.max(0,Math.min(maxX,ev.clientX-rect.left-data.offsetX));
+    const y=Math.max(0,Math.min(maxY,ev.clientY-rect.top-data.offsetY));
+    data.el.style.left=x+'px'; data.el.style.top=y+'px'; data.moved=true;
+  }
+
+  function endDrag(ev){
+    const el=ev.currentTarget; const data=active.get(el.dataset.id);
+    if(!data) return;
+    data.dragging=false; el.classList.remove('dragging');
+    el.removeEventListener('pointermove',moveDrag);
+    const maxX=Math.max(1,canvas.clientWidth-el.offsetWidth);
+    const maxY=Math.max(1,canvas.clientHeight-el.offsetHeight);
+    fetch('/api/bubbles/'+encodeURIComponent(el.dataset.id),{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({x:parseFloat(el.style.left)/maxX,y:parseFloat(el.style.top)/maxY})}).catch(()=>{});
   }
 
   function showViewer(b){
     viewerContent.textContent = b.content;
     viewer.classList.add('show');
-    viewerDel.style.display = (b.ownerId && b.ownerId === ownerId)?'inline-block':'none';
+    viewerDel.style.display = 'inline-block';
     viewerDel.dataset.id = b.id;
   }
 
@@ -109,7 +148,7 @@
 
   viewerDel.addEventListener('click', ()=>{
     const id = viewerDel.dataset.id;
-    fetch('/api/bubbles/'+encodeURIComponent(id), {method:'DELETE', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ownerId})}).then(r=>{
+    fetch('/api/bubbles/'+encodeURIComponent(id), {method:'DELETE'}).then(r=>{
       if(r.ok) return r.json(); else throw r;
     }).then(()=>{
       // remove from DOM
@@ -148,6 +187,7 @@
     const w = canvas.clientWidth, h = canvas.clientHeight;
     active.forEach((data, id)=>{
       const el = data.el;
+      if(data.dragging) return;
       let x = parseFloat(el.style.left) || 0;
       let y = parseFloat(el.style.top) || 0;
       // random small jitter
@@ -158,8 +198,12 @@
       data.vy = Math.max(-1, Math.min(1, data.vy));
       x += data.vx; y += data.vy;
       // keep inside
-      x = Math.max(6, Math.min(w - el.offsetWidth - 6, x));
-      y = Math.max(6, Math.min(h - el.offsetHeight - 6, y));
+      const maxX = Math.max(6, w - el.offsetWidth - 6);
+      const maxY = Math.max(6, h - el.offsetHeight - 6);
+      if(x <= 6 || x >= maxX) data.vx *= -1;
+      if(y <= 6 || y >= maxY) data.vy *= -1;
+      x = Math.max(6, Math.min(maxX, x));
+      y = Math.max(6, Math.min(maxY, y));
       el.style.left = x + 'px'; el.style.top = y + 'px';
     });
     requestAnimationFrame(rafLoop);

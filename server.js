@@ -74,18 +74,23 @@ app.post('/api/bubbles', (req, res)=>{
 
 app.delete('/api/bubbles/:id', (req, res)=>{
   const id = req.params.id;
-  const { ownerId } = req.body || {};
   const arr = readBubbles();
   const idx = arr.findIndex(b=>b.id===id);
   if(idx===-1) return res.status(404).json({error:'not found'});
-  const bubble = arr[idx];
-  // only owner can delete
-  if(bubble.ownerId && ownerId && bubble.ownerId === ownerId){
-    arr.splice(idx,1);
-    writeBubbles(arr);
-    return res.json({ok:true});
-  }
-  return res.status(403).json({error:'forbidden'});
+  arr.splice(idx,1);
+  writeBubbles(arr);
+  return res.json({ok:true});
+});
+
+app.patch('/api/bubbles/:id', (req, res)=>{
+  const {x, y} = req.body || {};
+  const arr = readBubbles();
+  const bubble = arr.find(item=>item.id===req.params.id);
+  if(!bubble) return res.status(404).json({error:'not found'});
+  if(typeof x==='number') bubble.x = Math.max(0, Math.min(1, x));
+  if(typeof y==='number') bubble.y = Math.max(0, Math.min(1, y));
+  writeBubbles(arr);
+  res.json({bubble});
 });
 
 app.listen(PORT, ()=>{
