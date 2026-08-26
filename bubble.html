@@ -1,0 +1,178 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>留言气泡</title>
+  <style>
+    :root{--bubble-bg:rgba(255,255,255,0.9);--bubble-color:#111}
+    body{font-family:Arial,Helvetica,sans-serif;margin:0;height:100vh;display:flex;flex-direction:column}
+    .topbar{padding:16px;background:#f6f8ff;border-bottom:1px solid #e6eefc}
+    .editor{max-width:900px;margin:18px auto;padding:12px;display:flex;gap:8px}
+    textarea{flex:1;min-height:80px;padding:12px;border-radius:10px;border:1px solid #dbe6ff;font-size:15px}
+    button.submit{background:#2b6cb0;color:#fff;border:none;padding:10px 14px;border-radius:10px;cursor:pointer}
+    .canvas{position:relative;flex:1;overflow:hidden;background:linear-gradient(180deg,#fff,#f2f6ff)}
+    .bubble{position:absolute;padding:10px 14px;border-radius:18px;background:var(--bubble-bg);color:var(--bubble-color);box-shadow:0 8px 20px rgba(20,30,60,.08);cursor:pointer;max-width:260px;word-break:break-word}
+    .bubble.small{font-size:14px}
+    .bubble.big{font-size:22px;padding:18px 22px;border-radius:14px}
+    .bubble .meta{display:block;margin-top:6px;font-size:11px;opacity:.6}
+
+    /* 弹出查看器 */
+    .viewer{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%) scale(.98);background:#fff;padding:18px;border-radius:12px;box-shadow:0 20px 60px rgba(20,30,60,.2);z-index:9999;display:none}
+    .viewer.show{display:block}
+    .viewer .content{font-size:20px;margin-bottom:12px}
+    .viewer .actions{display:flex;gap:8px;justify-content:flex-end}
+    .viewer button{padding:8px 12px;border-radius:8px;border:none;cursor:pointer}
+    .viewer .del{background:#e53e3e;color:#fff}
+    .viewer .close{background:#edf2f7}
+
+    /* 右下角徽章样式（若 server 已添加） */
+    .site-stats{position:fixed;right:16px;bottom:16px;background:rgba(0,0,0,.75);color:#fff;padding:8px 12px;border-radius:20px;font-weight:700;z-index:10000;font-size:13px}
+  </style>
+</head>
+<body>
+  <div class="topbar">
+    <strong>页面气泡</strong>：在下面输入内容并点击“发表”，内容会以气泡形式随机显示并在页面间保存。
+  </div>
+
+  <div class="editor">
+    <textarea id="txt" placeholder="写下你的话...（Enter 换行，点击‘发表’提交）"></textarea>
+    <button class="submit" id="submit">发表</button>
+  </div>
+
+  <div class="canvas" id="canvas"></div>
+
+  <div class="viewer" id="viewer" role="dialog" aria-modal="true">
+    <div class="content" id="viewer-content"></div>
+    <div class="actions">
+      <button class="close" id="viewer-close">关闭</button>
+      <button class="del" id="viewer-del" style="display:none">删除</button>
+    </div>
+  </div>
+
+  <div id="site-stats" class="site-stats" aria-hidden="true" style="display:none">
+    访问量：<span id="visit-count">—</span>
+  </div>
+
+  <script>
+  // 工具函数
+  function escapeHtml(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
+  function rand(min,max){ return Math.random()*(max-min)+min }
+  function genId(){ return Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,8) }
+
+  const apiBubbles = '/api/bubbles';
+  const ownerKey = 'yohou_owner_id_v1';
+  let ownerId = localStorage.getItem(ownerKey);
+  if(!ownerId){ ownerId = genId(); localStorage.setItem(ownerKey, ownerId); }
+
+  const canvas = document.getElementById('canvas');
+  const txt = document.getElementById('txt');
+  const submit = document.getElementById('submit');
+  const viewer = document.getElementById('viewer');
+  const viewerContent = document.getElementById('viewer-content');
+  const viewerClose = document.getElementById('viewer-close');
+  const viewerDel = document.getElementById('viewer-del');
+
+  // 动画列表
+  const active = new Map(); // id -> {el,vx,vy}
+
+  function addBubbleToDOM(b){
+    const el = document.createElement('div');
+    el.className = 'bubble small';
+    el.dataset.id = b.id;
+    el.dataset.owner = b.ownerId || '';
+    el.innerHTML = '<div class="txt">'+escapeHtml(b.content)+'</div>' + '<span class="meta">#'+(new Date(b.createdAt)).toLocaleString()+'</span>';
+    // position based on normalized x,y in viewport
+    const w = canvas.clientWidth, h = canvas.clientHeight;
+    const x = Math.round((b.x||Math.random()) * Math.max(w-120, 80));
+    const y = Math.round((b.y||Math.random()) * Math.max(h-60, 60));
+    el.style.left = x + 'px'; el.style.top = y + 'px';
+    // random velocity
+    const vx = rand(-0.3,0.3); const vy = rand(-0.2,0.2);
+    canvas.appendChild(el);
+    active.set(b.id, {el,vx,vy});
+
+    el.addEventListener('click', (ev)=>{
+      ev.stopPropagation();
+      showViewer(b);
+    });
+  }
+
+  function showViewer(b){
+    viewerContent.textContent = b.content;
+    viewer.classList.add('show');
+    viewerDel.style.display = (b.ownerId && b.ownerId === ownerId)?'inline-block':'none';
+    viewerDel.dataset.id = b.id;
+  }
+
+  viewerClose.addEventListener('click', ()=>viewer.classList.remove('show'));
+
+  viewerDel.addEventListener('click', ()=>{
+    const id = viewerDel.dataset.id;
+    fetch('/api/bubbles/'+encodeURIComponent(id), {method:'DELETE', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ownerId})}).then(r=>{
+      if(r.ok) return r.json(); else throw r;
+    }).then(()=>{
+      // remove from DOM
+      const it = active.get(id); if(it){ it.el.remove(); active.delete(id); }
+      viewer.classList.remove('show');
+    }).catch(()=>{ alert('删除失败：你不是作者或网络错误'); });
+  });
+
+  // fetch existing bubbles on load
+  function loadBubbles(){
+    fetch(apiBubbles).then(r=>r.json()).then(j=>{
+      const arr = j.bubbles || [];
+      arr.forEach(addBubbleToDOM);
+    }).catch(()=>{});
+  }
+
+  // submit new bubble
+  submit.addEventListener('click', ()=>{
+    const v = txt.value.trim(); if(!v) return;
+    const b = { content: v, x: Math.random(), y: Math.random(), ownerId };
+    fetch(apiBubbles, {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(b)}).then(r=>r.json()).then(j=>{
+      const bubble = j.bubble;
+      addBubbleToDOM(bubble);
+      txt.value='';
+    }).catch(()=>{ alert('提交失败'); });
+  });
+
+  // animate bubbles with gentle random movement
+  function rafLoop(){
+    const w = canvas.clientWidth, h = canvas.clientHeight;
+    active.forEach((data, id)=>{
+      const el = data.el;
+      let x = parseFloat(el.style.left) || 0;
+      let y = parseFloat(el.style.top) || 0;
+      // random small jitter
+      data.vx += rand(-0.02,0.02);
+      data.vy += rand(-0.01,0.01);
+      // clamp velocity
+      data.vx = Math.max(-1, Math.min(1, data.vx));
+      data.vy = Math.max(-1, Math.min(1, data.vy));
+      x += data.vx; y += data.vy;
+      // keep inside
+      x = Math.max(6, Math.min(w - el.offsetWidth - 6, x));
+      y = Math.max(6, Math.min(h - el.offsetHeight - 6, y));
+      el.style.left = x + 'px'; el.style.top = y + 'px';
+    });
+    requestAnimationFrame(rafLoop);
+  }
+
+  // click canvas to close viewer
+  canvas.addEventListener('click', ()=>viewer.classList.remove('show'));
+
+  // init
+  loadBubbles(); rafLoop();
+
+  // visit badge
+  (function(){
+    const badge = document.getElementById('site-stats');
+    const countEl = document.getElementById('visit-count');
+    const api = '/api/visits';
+    fetch(api, {method:'POST'}).then(r=>r.json()).then(j=>{ countEl.textContent = j.count; badge.style.display='block'; badge.setAttribute('aria-hidden','false'); }).catch(()=>{});
+  })();
+
+  </script>
+</body>
+</html>

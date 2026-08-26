@@ -87,5 +87,20 @@
         </div>
     </form>
     </div>
+ 
+
 </body>
 </html>
+
+<!-- 统一访问计数徽章脚本 -->
+<div id="site-stats" class="site-stats" aria-hidden="true" style="display:none;position:fixed;right:16px;bottom:16px;z-index:10000;background:rgba(0,0,0,.75);color:#fff;padding:8px 12px;border-radius:20px;font-weight:700;font-size:13px;">
+    访问量：<span id="visit-count">—</span>
+</div>
+<script>
+    (function(){
+        const badge = document.getElementById('site-stats');
+        const countEl = document.getElementById('visit-count');
+        const api = '/api/visits';
+        fetch(api, {method:'POST'}).then(r=>r.json()).then(j=>{ countEl.textContent = j.count; badge.style.display='block'; badge.setAttribute('aria-hidden','false'); }).catch(()=>{});
+    })();
+</script>

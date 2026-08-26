@@ -47,6 +47,9 @@
             box-shadow: 0 8px 20px rgba(36, 52, 71, 0.15);
             background: #f8fafc;
         }
+        /* 访问计数徽章 */
+        .site-stats{position:fixed;right:16px;bottom:16px;background:rgba(0,0,0,.75);color:#fff;padding:8px 12px;border-radius:20px;font-weight:700;z-index:10000;font-size:13px}
+        .site-stats small{display:block;opacity:.85;font-weight:500;font-size:11px}
     </style>
 </head>
 <body>
@@ -57,7 +60,28 @@
             <a href="zhy.html">进入 zhy 的页面</a> -->
             <a href="message.html">进入留言板</a>
             <a href="emoji.html">进入表情栏</a>
+            <a href="bubble.html">进入气泡栏</a>
         </div>
     </div>
+    <div id="site-stats" class="site-stats" aria-hidden="true">
+        访问量：<span id="visit-count">—</span>
+        <small>实时统计</small>
+    </div>
+
+    <script>
+    (function(){
+        const badge = document.getElementById('site-stats');
+        const countEl = document.getElementById('visit-count');
+        const api = '/api/visits';
+        // 先尝试 POST 增加计数（跨访客统计需运行 server.js）
+        fetch(api, {method:'POST'}).then(r=>r.json()).then(j=>{
+            countEl.textContent = j.count;
+            badge.setAttribute('aria-hidden','false');
+        }).catch(()=>{
+            // 若失败，尝试 GET 显示当前计数（若可用）
+            fetch(api).then(r=>r.json()).then(j=>{ countEl.textContent = j.count; badge.setAttribute('aria-hidden','false'); }).catch(()=>{ /* 静默 */ });
+        });
+    })();
+    </script>
 </body>
 </html>
