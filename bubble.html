@@ -130,11 +130,17 @@
   submit.addEventListener('click', ()=>{
     const v = txt.value.trim(); if(!v) return;
     const b = { content: v, x: Math.random(), y: Math.random(), ownerId };
-    fetch(apiBubbles, {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(b)}).then(r=>r.json()).then(j=>{
-      const bubble = j.bubble;
-      addBubbleToDOM(bubble);
-      txt.value='';
-    }).catch(()=>{ alert('提交失败'); });
+    fetch(apiBubbles, {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(b)})
+      .then(r=>{
+        if(!r.ok) return r.text().then(t=>{ throw new Error((t && t.toString()) || ('Status '+r.status)); });
+        return r.json();
+      })
+      .then(j=>{
+        const bubble = j.bubble;
+        addBubbleToDOM(bubble);
+        txt.value='';
+      })
+      .catch(err=>{ console.error('提交失败：', err); alert('提交失败：'+err.message); });
   });
 
   // animate bubbles with gentle random movement
