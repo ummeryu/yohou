@@ -20,6 +20,7 @@
   },
   "homepage": "https://github.com/ummeryu/yohou#readme",
   "dependencies": {
+    "@upstash/redis": "^1.38.3",
     "cors": "^2.8.6",
     "express": "^5.2.1"
   }
