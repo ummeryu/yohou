@@ -11,6 +11,14 @@ async function readBubbles(redis){
   return (await redis.get(KEY)) || [];
 }
 
+function getBubbleId(req){
+  const queryId = req.query && req.query.id;
+  if(typeof queryId === 'string' && queryId) return queryId;
+  if(req.params && typeof req.params.id === 'string' && req.params.id) return req.params.id;
+  const match = (req.url || '').match(/\/api\/bubbles\/([^?]+)/);
+  return match ? decodeURIComponent(match[1]) : null;
+}
+
 module.exports = async function handler(req, res){
   try{
     const redis = getRedis();
@@ -36,7 +44,9 @@ module.exports = async function handler(req, res){
 
     if(req.method === 'PATCH'){
       const {x, y} = readBody(req);
-      const bubble = bubbles.find(item=>item.id === req.query.id);
+      const id = getBubbleId(req);
+      if(!id) return res.status(400).json({error:'missing bubble id'});
+      const bubble = bubbles.find(item=>item.id === id);
       if(!bubble) return res.status(404).json({error:'not found'});
       if(typeof x === 'number') bubble.x = Math.max(0, Math.min(1, x));
       if(typeof y === 'number') bubble.y = Math.max(0, Math.min(1, y));
@@ -45,7 +55,9 @@ module.exports = async function handler(req, res){
     }
 
     if(req.method === 'DELETE'){
-      const next = bubbles.filter(item=>item.id !== req.query.id);
+      const id = getBubbleId(req);
+      if(!id) return res.status(400).json({error:'missing bubble id'});
+      const next = bubbles.filter(item=>item.id !== id);
       if(next.length === bubbles.length) return res.status(404).json({error:'not found'});
       await redis.set(KEY, next);
       return res.status(200).json({ok:true});
